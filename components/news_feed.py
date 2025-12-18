@@ -12,6 +12,12 @@ from urllib.parse import quote
 # RSS Feed sources for appliance repair industry
 RSS_FEEDS = [
     {
+        'name': 'UASA',
+        'url': 'https://www.unitedservicers.com/blog/feed/',
+        'icon': '🛠️',
+        'category': 'industry'
+    },
+    {
         'name': 'Repair.org',
         'url': 'https://www.repair.org/blog?format=rss',
         'icon': '⚖️',
