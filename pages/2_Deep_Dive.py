@@ -13,11 +13,10 @@ st.set_page_config(
 )
 
 # Load custom CSS
-try:
-    with open("styles/main.css") as f:
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-except FileNotFoundError:
-    pass
+from pathlib import Path
+css_path = Path(__file__).parent.parent / "styles" / "main.css"
+if css_path.exists():
+    st.markdown(f"<style>{css_path.read_text()}</style>", unsafe_allow_html=True)
 
 # Header
 st.markdown("""
