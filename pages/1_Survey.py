@@ -190,33 +190,31 @@ with st.form("field_report"):
         saved = storage.save_field_report(report_data)
         
         if saved:
-            st.success("✅ Your field report has been received!")
+            st.session_state.submitted = True
+            st.session_state.save_success = True
         else:
-            st.warning("⚠️ Report saved locally. Database sync pending.")
-        
-        st.balloons()
-        
-        st.markdown("""
-        ---
-        
-        ### Thank you for contributing!
-        
-        Your anonymous data helps fellow servicers understand the bigger picture.
-        """)
-        
-        # Optional email signup
-        st.markdown("### Want the monthly report?")
-        email = st.text_input(
-            "Drop your email (optional):",
-            placeholder="you@example.com",
-            key="email_signup"
-        )
-        
-        if email:
-            # TODO: Save email to separate table
-            st.info("📧 We'll send you the monthly breakdown!")
-        
-        # Link back to dashboard
-        if st.button("← Back to Dashboard"):
-            st.switch_page("app.py")
+            st.session_state.submitted = True
+            st.session_state.save_success = False
+
+# Show thank you message outside the form
+if st.session_state.get('submitted'):
+    if st.session_state.get('save_success'):
+        st.success("✅ Your field report has been received!")
+    else:
+        st.warning("⚠️ Report saved locally. Database sync pending.")
+    
+    st.balloons()
+    
+    st.markdown("""
+    ---
+    
+    ### Thank you for contributing!
+    
+    Your anonymous data helps fellow servicers understand the bigger picture.
+    """)
+    
+    # Link back to dashboard
+    if st.button("← Back to Dashboard"):
+        st.session_state.submitted = False
+        st.switch_page("app.py")
 
