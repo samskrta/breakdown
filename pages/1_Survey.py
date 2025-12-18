@@ -4,6 +4,7 @@ Anonymous monthly survey for servicers to contribute real-world data
 """
 import streamlit as st
 from datetime import datetime
+from data.storage import get_storage
 
 st.set_page_config(
     page_title="Submit Field Report | Break-down Breakdown",
@@ -174,20 +175,24 @@ with st.form("field_report"):
         }
         
         report_data = {
-            'timestamp': datetime.now().isoformat(),
             'call_volume': call_volume_map.get(call_volume, 3),
             'parts_lead_time': parts_lead_time,
             'trying_to_hire': trying_to_hire == "Yes",
             'hiring_difficulty': difficulty_map.get(hiring_difficulty, None) if hiring_difficulty else None,
             'business_sentiment': sentiment_map.get(business_sentiment, 3),
             'region': region,
-            'company_size': company_size
+            'company_size': company_size,
+            'month': datetime.now().strftime('%Y-%m')
         }
         
-        # TODO: Save to database
-        # For now, just show success message
+        # Save to database
+        storage = get_storage()
+        saved = storage.save_field_report(report_data)
         
-        st.success("✅ Your field report has been received!")
+        if saved:
+            st.success("✅ Your field report has been received!")
+        else:
+            st.warning("⚠️ Report saved locally. Database sync pending.")
         
         st.balloons()
         
