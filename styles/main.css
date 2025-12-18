@@ -367,6 +367,12 @@ header {visibility: hidden;}
     margin-top: 0.25rem;
 }
 
+.news-card-link {
+    text-decoration: none;
+    display: block;
+    height: 100%;
+}
+
 .news-card {
     background: var(--off-white);
     border-radius: 8px;
@@ -381,6 +387,7 @@ header {visibility: hidden;}
 .news-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    border-color: var(--zone-excellent);
 }
 
 .news-icon {

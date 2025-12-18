@@ -1,60 +1,130 @@
 """
 News Feed Component
-Industry news and updates section
+Industry news from RSS feeds
 """
 import streamlit as st
 from typing import List, Dict
-from datetime import datetime, timedelta
+from datetime import datetime
+import feedparser
+import requests
+from urllib.parse import quote
+
+# RSS Feed sources for appliance repair industry
+RSS_FEEDS = [
+    {
+        'name': 'Repair.org',
+        'url': 'https://www.repair.org/blog?format=rss',
+        'icon': '⚖️',
+        'category': 'legislation'
+    },
+    {
+        'name': 'Appliance Service News',
+        'url': 'https://www.applianceservicenews.com/feed/',
+        'icon': '🔧',
+        'category': 'industry'
+    },
+]
+
+# Google News RSS as fallback/supplement
+GOOGLE_NEWS_TOPICS = [
+    ('appliance repair industry', '🔧'),
+    ('right to repair appliance', '⚖️'),
+    ('appliance technician shortage', '👷'),
+]
 
 
+def get_google_news_rss(query: str) -> str:
+    """Generate Google News RSS URL for a search query"""
+    encoded_query = quote(query)
+    return f"https://news.google.com/rss/search?q={encoded_query}&hl=en-US&gl=US&ceid=US:en"
+
+
+@st.cache_data(ttl=3600)  # Cache for 1 hour
+def fetch_rss_feed(url: str, source_name: str, icon: str) -> List[Dict]:
+    """Fetch and parse an RSS feed"""
+    try:
+        feed = feedparser.parse(url)
+        items = []
+        
+        for entry in feed.entries[:3]:  # Get top 3 from each source
+            # Parse date
+            if hasattr(entry, 'published_parsed') and entry.published_parsed:
+                date = datetime(*entry.published_parsed[:6])
+                date_str = date.strftime('%b %d')
+            else:
+                date_str = 'Recent'
+            
+            items.append({
+                'title': entry.title[:80] + '...' if len(entry.title) > 80 else entry.title,
+                'url': entry.link,
+                'source': source_name,
+                'date': date_str,
+                'icon': icon
+            })
+        
+        return items
+    except Exception as e:
+        print(f"Error fetching {url}: {e}")
+        return []
+
+
+@st.cache_data(ttl=3600)
 def get_news_items() -> List[Dict]:
     """
-    Get news items for the feed.
-    TODO: Connect to RSS feeds or news API
+    Get news items from multiple RSS feeds
     """
-    # Mock news for now - would be replaced with actual RSS/API
-    today = datetime.now()
+    all_items = []
     
+    # Fetch from configured RSS feeds
+    for feed in RSS_FEEDS:
+        items = fetch_rss_feed(feed['url'], feed['name'], feed['icon'])
+        all_items.extend(items)
+    
+    # Fetch from Google News for industry topics
+    for topic, icon in GOOGLE_NEWS_TOPICS:
+        url = get_google_news_rss(topic)
+        items = fetch_rss_feed(url, 'Industry News', icon)
+        all_items.extend(items[:2])  # Limit Google News items
+    
+    # If no items fetched, return fallback
+    if not all_items:
+        return get_fallback_news()
+    
+    # Remove duplicates by title and limit to 5
+    seen_titles = set()
+    unique_items = []
+    for item in all_items:
+        title_key = item['title'][:40].lower()
+        if title_key not in seen_titles:
+            seen_titles.add(title_key)
+            unique_items.append(item)
+    
+    return unique_items[:5]
+
+
+def get_fallback_news() -> List[Dict]:
+    """Fallback news items if RSS fails"""
     return [
         {
-            'title': 'Right to Repair Gains Momentum in California',
+            'title': 'Visit Repair.org for Right to Repair news',
             'source': 'Repair.org',
-            'date': (today - timedelta(days=1)).strftime('%b %d'),
-            'url': '#',
-            'category': 'legislation',
+            'date': '',
+            'url': 'https://www.repair.org',
             'icon': '⚖️'
         },
         {
-            'title': 'Samsung Extends Parts Availability for Major Appliances',
-            'source': 'Appliance Service News',
-            'date': (today - timedelta(days=2)).strftime('%b %d'),
-            'url': '#',
-            'category': 'parts',
-            'icon': '🔧'
-        },
-        {
-            'title': 'Technician Shortage Hits Record Levels in Midwest',
-            'source': 'UASA Weekly',
-            'date': (today - timedelta(days=3)).strftime('%b %d'),
-            'url': '#',
-            'category': 'labor',
-            'icon': '👷'
-        },
-        {
-            'title': 'Whirlpool Announces New Diagnostic Tool Program',
-            'source': 'Appliance Design',
-            'date': (today - timedelta(days=5)).strftime('%b %d'),
-            'url': '#',
-            'category': 'tools',
-            'icon': '📱'
-        },
-        {
-            'title': 'Home Appliance Shipments Down 8% in Q4',
+            'title': 'AHAM Appliance Industry Updates',
             'source': 'AHAM',
-            'date': (today - timedelta(days=7)).strftime('%b %d'),
-            'url': '#',
-            'category': 'market',
+            'date': '',
+            'url': 'https://www.aham.org',
             'icon': '📊'
+        },
+        {
+            'title': 'Appliance Service News',
+            'source': 'ASN',
+            'date': '',
+            'url': 'https://www.applianceservicenews.com',
+            'icon': '🔧'
         },
     ]
 
@@ -67,7 +137,7 @@ def render_news_feed():
     <div class="news-section">
         <div class="news-header">
             <h2 class="news-title">📰 Industry Wire</h2>
-            <span class="news-subtitle">What's happening in the appliance repair world</span>
+            <span class="news-subtitle">Live headlines from the appliance repair world</span>
         </div>
     </div>
     ''', unsafe_allow_html=True)
@@ -78,12 +148,14 @@ def render_news_feed():
     for i, item in enumerate(news_items):
         with cols[i]:
             st.markdown(f'''
-            <div class="news-card">
-                <div class="news-icon">{item['icon']}</div>
-                <div class="news-date">{item['date']}</div>
-                <div class="news-card-title">{item['title']}</div>
-                <div class="news-source">{item['source']}</div>
-            </div>
+            <a href="{item['url']}" target="_blank" class="news-card-link">
+                <div class="news-card">
+                    <div class="news-icon">{item['icon']}</div>
+                    <div class="news-date">{item['date']}</div>
+                    <div class="news-card-title">{item['title']}</div>
+                    <div class="news-source">{item['source']}</div>
+                </div>
+            </a>
             ''', unsafe_allow_html=True)
 
 
@@ -99,4 +171,3 @@ def render_news_ticker():
         </div>
     </div>
     ''', unsafe_allow_html=True)
-
